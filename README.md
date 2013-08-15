@@ -3,7 +3,19 @@ persistJS
 
 Automatically Persist Forms across page refreshes
 
-== Setup
+## Compatibility:
+ * IE 8+
+ * Firefox 21+
+ * Chrome 27+
+ * Safari 5.1+
+ * Opera 15+
+ * iOS Safari 4.0+
+ * Android Browser 2.1+
+ * Chrome for Android 28+
+ * Firefox for Android 23+
+ * Blackberry Browser 7.0+
+
+## Setup
 
 add persistJS to your html head;
 
@@ -11,7 +23,7 @@ add persistJS to your html head;
 <script src="persistForms.js" type="text/javascript"></script>
 ```
 
-== Usage
+## Usage
 
 Any form you wish to persist, simply add the attribute "persist" to the form element;
 
