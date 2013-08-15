@@ -141,30 +141,35 @@
 			return persistTemp;
 		},
 		init: function(){
-			var nodes = document.querySelectorAll("form[persist] input,textarea,select");
+			var nodes = document.querySelectorAll("form[persist] *");
+			var eleNodeName = "";
 			for ( var i = 0; i < nodes.length; i++ ) {
-				nodes[i].onchange = persist;
+				eleNodeName = nodes[i].nodeName.toLowerCase();
+				if ( ( eleNodeName === "input" || eleNodeName === "select" || eleNodeName === "textarea" ) && ( nodes[i].name.length > 0 ) )
+					nodes[i].onchange = persist;
 			}
 			var db = window.sessionStorage;
 			var forms = document.querySelectorAll("form[persist]");
 			var formNode;
 			var formId = "";
 			var eleNode;
-			var eleNodeName = "";
 			for ( var f = 0; f < forms.length; f++ ) {
 				formNode = forms[f];
-				formId = formNode.id;
-				if ( db.getItem( formId ) )
-					for ( var n = 0; n < formNode.length; n++ ) {
-						eleNode = formNode[n];
-						eleNodeName = eleNode.nodeName.toLowerCase();
-						if ( ( eleNodeName === "input" || eleNodeName === "select" || eleNodeName === "textarea" ) && ( eleNode.name.length > 0 ) )
-							this.updateDomFromDb( formId , eleNode.name );
-					}
-				else {
-					var serialized = this.serialize("form[persist]#"+formId);
-					db.setItem( formId, JSON.stringify(serialized[formId]));
-				}
+                if ( formNode.id.length > 0 ){
+                    formId = formNode.id;
+                    console.log(formId);
+                    if ( db.getItem( formId ) )
+                        for ( var n = 0; n < formNode.length; n++ ) {
+                            eleNode = formNode[n];
+                            eleNodeName = eleNode.nodeName.toLowerCase();
+                            if ( ( eleNodeName === "input" || eleNodeName === "select" || eleNodeName === "textarea" ) && ( eleNode.name.length > 0 ) )
+                                this.updateDomFromDb( formId , eleNode.name );
+                        }
+                    else {
+                        var serialized = this.serialize("form[persist]#"+formId);
+                        db.setItem( formId, JSON.stringify(serialized[formId]));
+                    }
+                }
 			}
 			return this;
 		}
