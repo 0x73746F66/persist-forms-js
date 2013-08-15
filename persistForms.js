@@ -157,7 +157,6 @@
 				formNode = forms[f];
                 if ( formNode.id.length > 0 ){
                     formId = formNode.id;
-                    console.log(formId);
                     if ( db.getItem( formId ) )
                         for ( var n = 0; n < formNode.length; n++ ) {
                             eleNode = formNode[n];
