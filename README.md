@@ -36,4 +36,7 @@ Any form you wish to persist, simply add the attribute "persist" to the form ele
 </form>
 ```
 
-Note: ensure the form has an id or it cannot be referenced by the script.
+NB1:      ensure the form has an id or it cannot be referenced by the script.
+
+NB2:      ensure all input, select, and textarea have a name attribute.
+          These are standard practice and there should never be any reason for these to not exist on any form.
