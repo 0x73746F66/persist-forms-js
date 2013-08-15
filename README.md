@@ -35,3 +35,5 @@ Any form you wish to persist, simply add the attribute "persist" to the form ele
   <input type="text" name="my_input" />
 </form>
 ```
+
+Note: ensure the form has an id or it cannot be referenced by the script.
