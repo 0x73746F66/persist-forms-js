@@ -1,6 +1,6 @@
 /**
  * @class persistJS
- * @verson 1.0
+ * @verson 1.1 [dev]
  * @author Christopher D Langton <chris@codewiz.biz>
  * @classDescription Automatically Persist Forms across page refreshes
  * @compatibility:
@@ -16,29 +16,33 @@
  *        Blackberry Browser 7.0+
  */
 (function (window, undefined) {
-    if ("sessionStorage" in window && "querySelectorAll" in document && "JSON" in window) {
+    if ("localStorage" in window && "querySelectorAll" in document && "JSON" in window) {
         var persist = function () {
             if (window === this) {
                 return new persist();
             }
             this.isNodeOfType = function (ele, type) {
-                return (ele.nodeName.toLowerCase() === type.toLowerCase()) ? true : false;
+                return (
+                    ele.nodeName.toLowerCase() === type.toLowerCase() ? true : false
+                    );
             };
             this.getAncestorOfType = function (ele, type) {
-                if (this.isNodeOfType(ele.parentNode, type)) return ele.parentNode;
-                else return this.getAncestorOfType(ele.parentNode, type);
+                return (
+                    this.isNodeOfType(ele.parentNode, type) ) ? ele.parentNode :
+                    this.getAncestorOfType(ele.parentNode, type
+                    );
             };
             this.isNode = function (o) {
                 return (
                     typeof Node === "object" ? o instanceof Node :
-                    o && typeof o === "object" && typeof o.nodeType === "number" && typeof o.nodeName === "string"
-                );
+                        o && typeof o === "object" && typeof o.nodeType === "number" && typeof o.nodeName === "string"
+                    );
             };
             this.isElement = function (o) {
                 return (
                     typeof HTMLElement === "object" ? o instanceof HTMLElement :
-                    o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName === "string"
-                );
+                        o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName === "string"
+                    );
             };
             if (this.isElement(this) || this.isNode(this)) {
                 var form = this.getAncestorOfType(this, 'form');
@@ -47,7 +51,7 @@
             return this;
         };
         persist.fn = persist.prototype = {
-            dbSave: function (index, key, value) {
+            dbSave: function (form, input, value) {
                 this.validJsonString = function (str) {
                     try {
                         JSON.parse(str);
@@ -58,13 +62,13 @@
                 };
                 var formJson = "";
                 var formObj = {};
-                var db = window.sessionStorage;
-                if (db.getItem(index)) {
-                    formJson = db.getItem(index);
+                var db = window.localStorage;
+                if (db.getItem(form)) {
+                    formJson = db.getItem(form);
                     if (this.validJsonString(formJson)) formObj = JSON.parse(formJson);
                 }
-                formObj[key] = value;
-                db.setItem(index, JSON.stringify(formObj));
+                formObj[input] = value;
+                db.setItem(form, JSON.stringify(formObj));
 
                 return this;
             },
@@ -79,7 +83,7 @@
                 };
                 var formJson = "";
                 var formObj = {};
-                var db = window.sessionStorage;
+                var db = window.localStorage;
                 if (db.getItem(index)) {
                     formJson = db.getItem(index);
                     if (this.validJsonString(formJson)) formObj = JSON.parse(formJson);
@@ -112,7 +116,6 @@
             serialize: function (selector) {
                 if (typeof selector === "undefined") selector = "form[persist]";
                 var forms = document.querySelectorAll(selector);
-                var db = window.sessionStorage;
                 var persistTemp = [];
                 var formNode;
                 var formId = "";
@@ -145,6 +148,32 @@
                 }
                 return persistTemp;
             },
+            dbClean: function (form, f) {
+                var db = window.localStorage;
+                if (db.getItem(form).length > 0) db.removeItem(form);
+                if ('function' === typeof f) f();
+                return this;
+            },
+            dbClear: function (f) {
+                var db = window.localStorage;
+                for (index in localStorage)
+                    if (document.querySelectorAll("form#" + index).length > 0)
+                        db.removeItem(index);
+                if ('function' === typeof f) f();
+                return this;
+            },
+            formClear: function (form, f) {
+                var nodes = ( "string" !== typeof form ) ? document.querySelectorAll("form[persist] *") :
+                    document.querySelectorAll("form#" + form + " *");
+                var eleNodeName = "";
+                for (var i = 0; i < nodes.length; i++) {
+                    eleNodeName = nodes[i].nodeName.toLowerCase();
+                    if ((eleNodeName === "input" || eleNodeName === "select" || eleNodeName === "textarea") && (nodes[i].name.length > 0))
+                        nodes[i].value = "";
+                }
+                if ('function' === typeof f) f();
+                return this;
+            },
             init: function () {
                 var nodes = document.querySelectorAll("form[persist] *");
                 var eleNodeName = "";
@@ -153,7 +182,7 @@
                     if ((eleNodeName === "input" || eleNodeName === "select" || eleNodeName === "textarea") && (nodes[i].name.length > 0))
                         nodes[i].onchange = persist;
                 }
-                var db = window.sessionStorage;
+                var db = window.localStorage;
                 var forms = document.querySelectorAll("form[persist]");
                 var formNode;
                 var formId = "";
