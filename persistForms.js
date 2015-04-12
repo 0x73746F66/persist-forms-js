@@ -3,181 +3,158 @@
  * @verson 1.0
  * @author Christopher D Langton <chris@codewiz.biz>
  * @classDescription Automatically Persist Forms across page refreshes
- * @compatibility:
- *        IE 8+
- *        Firefox 21+
- *        Chrome 27+
- *        Safari 5.1+
- *        Opera 15+
- *        iOS Safari 4.0+
- *        Android Browser 2.1+
- *        Chrome for Android 28+
- *        Firefox for Android 23+
- *        Blackberry Browser 7.0+
  */
-(function (window, undefined) {
-    if ("sessionStorage" in window && "querySelectorAll" in document && "JSON" in window) {
-        var persist = function () {
-            if (window === this) {
-                return new persist();
-            }
-            this.isNodeOfType = function (ele, type) {
-                return (ele.nodeName.toLowerCase() === type.toLowerCase()) ? true : false;
-            };
-            this.getAncestorOfType = function (ele, type) {
-                if (this.isNodeOfType(ele.parentNode, type)) return ele.parentNode;
-                else return this.getAncestorOfType(ele.parentNode, type);
-            };
-            this.isNode = function (o) {
-                return (
-                    typeof Node === "object" ? o instanceof Node :
-                    o && typeof o === "object" && typeof o.nodeType === "number" && typeof o.nodeName === "string"
-                );
-            };
-            this.isElement = function (o) {
-                return (
-                    typeof HTMLElement === "object" ? o instanceof HTMLElement :
-                    o && typeof o === "object" && o !== null && o.nodeType === 1 && typeof o.nodeName === "string"
-                );
-            };
-            if (this.isElement(this) || this.isNode(this)) {
-                var form = this.getAncestorOfType(this, 'form');
-                persist().dbSave(form.id, this.name, this.value);
-            }
-            return this;
-        };
-        persist.fn = persist.prototype = {
-            dbSave: function (index, key, value) {
-                this.validJsonString = function (str) {
-                    try {
-                        JSON.parse(str);
-                    } catch (e) {
-                        return false;
-                    }
-                    return true;
-                };
-                var formJson = "";
-                var formObj = {};
-                var db = window.sessionStorage;
-                if (db.getItem(index)) {
-                    formJson = db.getItem(index);
-                    if (this.validJsonString(formJson)) formObj = JSON.parse(formJson);
-                }
-                formObj[key] = value;
-                db.setItem(index, JSON.stringify(formObj));
-
-                return this;
-            },
-            updateDomFromDb: function (index, key) {
-                this.validJsonString = function (str) {
-                    try {
-                        JSON.parse(str);
-                    } catch (e) {
-                        return false;
-                    }
-                    return true;
-                };
-                var formJson = "";
-                var formObj = {};
-                var db = window.sessionStorage;
-                if (db.getItem(index)) {
-                    formJson = db.getItem(index);
-                    if (this.validJsonString(formJson)) formObj = JSON.parse(formJson);
-                    var eleNode = document.querySelectorAll('form#' + index + ' [name="' + key + '"]');
-                    if (typeof formObj[key] !== "undefined")
-                        if (eleNode.length > 1) {
-                            var ele;
-                            for (var n = 0; n < eleNode.length; n++) {
-                                ele = eleNode[n];
-                                if (ele.value === formObj[key])
-                                    ele.checked = true;
-                            }
-                        } else {
-                            if (eleNode[0].nodeName.toLowerCase() === "textarea")
-                                eleNode[0].text = formObj[key];
-                            else if (eleNode[0].nodeName.toLowerCase() === "select") {
-                                var options = eleNode[0].options;
-                                for (var o = 0; o < options.length; o++) {
-                                    if (options[o].value === formObj[key]) {
-                                        options[o].selected = true;
-                                    }
-                                }
-                            } else
-                                eleNode[0].value = formObj[key];
-                        }
-                }
-
-                return this;
-            },
-            serialize: function (selector) {
-                if (typeof selector === "undefined") selector = "form[persist]";
-                var forms = document.querySelectorAll(selector);
-                var db = window.sessionStorage;
-                var persistTemp = [];
-                var formNode;
-                var formId = "";
-                var eleNode;
-                var eleNodeName = "";
-                for (var f = 0; f < forms.length; f++) {
-                    formNode = forms[f];
-                    formId = formNode.id;
-                    persistTemp[formId] = {};
-                    for (var i = 0; i < formNode.length; i++) {
-                        eleNode = formNode[i];
-                        eleNodeName = eleNode.nodeName.toLowerCase();
-                        if (eleNodeName === "input" || eleNodeName === "select" || eleNodeName === "textarea") {
-                            if (eleNode.name.length > 0) {
-                                if ((eleNode.type === "radio" || eleNode.type === "checkbox")) {
-                                    if (eleNode.checked)
-                                        persistTemp[formId][eleNode.name] = eleNode.value;
-                                } else if (eleNode.name === "select") {
-                                    persistTemp[formId][eleNode.name] = eleNode.value;
-                                } else if (eleNode.name === "textarea") {
-                                    if (eleNode.length > 0)
-                                        persistTemp[formId][eleNode.name] = eleNode.text;
-                                } else {
-                                    if (eleNode.length > 0)
-                                        persistTemp[formId][eleNode.name] = eleNode.value;
-                                }
-                            }
-                        }
-                    }
-                }
-                return persistTemp;
-            },
-            init: function () {
-                var nodes = document.querySelectorAll("form[persist] *");
-                var eleNodeName = "";
-                for (var i = 0; i < nodes.length; i++) {
-                    eleNodeName = nodes[i].nodeName.toLowerCase();
-                    if ((eleNodeName === "input" || eleNodeName === "select" || eleNodeName === "textarea") && (nodes[i].name.length > 0))
-                        nodes[i].onchange = persist;
-                }
-                var db = window.sessionStorage;
-                var forms = document.querySelectorAll("form[persist]");
-                var formNode;
-                var formId = "";
-                var eleNode;
-                for (var f = 0; f < forms.length; f++) {
-                    formNode = forms[f];
-                    if (formNode.id.length > 0) {
-                        formId = formNode.id;
-                        if (db.getItem(formId))
-                            for (var n = 0; n < formNode.length; n++) {
-                                eleNode = formNode[n];
-                                eleNodeName = eleNode.nodeName.toLowerCase();
-                                if ((eleNodeName === "input" || eleNodeName === "select" || eleNodeName === "textarea") && (eleNode.name.length > 0))
-                                    this.updateDomFromDb(formId, eleNode.name);
-                            } else {
-                            var serialized = this.serialize("form[persist]#" + formId);
-                            db.setItem(formId, JSON.stringify(serialized[formId]));
-                        }
-                    }
-                }
-                return this;
-            }
-        };
-        window.persist = persist;
-        persist().init();
+(function (window, $, undefined) {
+  var PersistForms = function PersistForms(options) {
+    if (window === this) {
+      return new PersistForms(options);
     }
-})(window);
+    this.options = $.extend({}, this.options,options);
+    $.fn.serializeObject = function serializeObject(){
+      var self = this,
+          json = {},
+          push_counters = {},
+          patterns = {
+            "validate": /^[a-zA-Z][a-zA-Z0-9_]*(?:\[(?:\d*|[a-zA-Z0-9_]+)\])*$/,
+            "key":      /[a-zA-Z0-9_]+|(?=\[\])/g,
+            "push":     /^$/,
+            "fixed":    /^\d+$/,
+            "named":    /^[a-zA-Z0-9_]+$/
+          };
+      this.build = function (base, key, value) {
+        base[key] = value;
+        return base;
+      };
+      this.push_counter = function (key) {
+        if (push_counters[key] === undefined)
+          push_counters[key] = 0;
+        return push_counters[key]++;
+      };
+      $.each($(this).serializeArray(), function() {
+        if (!patterns.validate.test(this.name))
+          return;
+        var k,
+            keys = this.name.match(patterns.key),
+            merge = this.value,
+            reverse_key = this.name;
+        while ((k = keys.pop()) !== undefined) {
+          reverse_key = reverse_key.replace(new RegExp("\\[" + k + "\\]$"), '');
+          if (k.match(patterns.push))
+            merge = self.build([], self.push_counter(reverse_key), merge);
+          else if (k.match(patterns.fixed))
+            merge = self.build([], k, merge);
+          else if (k.match(patterns.named))
+            merge = self.build({}, k, merge);
+        }
+        json = $.extend(true, json, merge);
+      });
+      return json;
+    };
+    return this;
+  };
+  PersistForms.fn = PersistForms.prototype = {
+    init: function init(){
+      var $that = this;
+      $(document).on('input change','form[id] input,form[id] select,form[id] textarea',function(){
+        var $form = $(this).parent('form');
+        PersistFormsInstance.db($form.prop('id'), $form.serializeObject());
+      });
+      $('form[id]').each(function(){
+        var $form = $(this),
+            formData = $that.db($form.prop('id'));
+        $('form[id] input,form[id] select,form[id] textarea').each(function(){
+          var $field = $(this),
+              fieldName = $field.prop('name').replace(/\[\]+$/,'');
+          if(formData !== null && formData[fieldName]) {
+            if (this.tagName === 'SELECT' && this.multiple) {
+              for (var i=0; i<formData[fieldName].length;i++) {
+                $field.children('option').filter('[value="'+formData[fieldName][i]+'"]').prop('selected', 'selected');
+              }
+            } else if (this.type === 'radio' || this.type === 'checkbox') {
+              for (var k=0; k<formData[fieldName].length;k++) {
+                $field.filter('[value="'+formData[fieldName][k]+'"]').prop('checked', 'checked');
+              }
+            } else {
+              $field.val(formData[fieldName]);
+            }
+          }
+        });
+      });
+      return this;
+    },
+    /**
+     * tests if a variable is a valid JSON string
+     * @param test string
+     * @returns {boolean}
+     */
+    isJSON: function isJSON(test){
+    if ("string" !== typeof test || '' === test) return false;
+    return /^[\],:{}\s]*$/.test(test.replace(/\\["\\\/bfnrtu]/g, '@').
+      replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
+      replace(/(?:^|:|,)(?:\s*\[)+/g, ''));
+    },
+    /**
+     * @param name string
+     * @param value string|int|Array|Object
+     * @param expires int|Date optional default 365 days
+     * @param path string optional
+     * @param domain string optional
+     * @returns {string} cookie
+     */
+    createCookie: function createCookie(name, value, expires, path, domain) {
+      if ('undefined' === typeof expires) expires = 365;
+      if ('string' !== typeof value) value = JSON.stringify(value);
+      var cookie = name + "=" + escape(value) + ";";
+      if (expires) {
+        if(expires instanceof Date) {// If it's a date
+          if (isNaN(expires.getTime()))// If it isn't a valid date
+            expires = new Date();
+        } else
+          expires = new Date(new Date().getTime() + parseInt(expires) * 1000 * 60 * 60 * 24);
+        cookie += "expires=" + expires.toGMTString() + ";";
+      }
+      if (path)
+        cookie += "path=" + path + ";";
+      if (domain)
+        cookie += "domain=" + domain + ";";
+
+      document.cookie = cookie;
+      return cookie;
+    },
+    /**
+     * @param name string
+     * @returns {string|int|Array|Object}
+     */
+    getCookie: function getCookie(name) {
+      var regexp = new RegExp("(?:^" + name + "|;\s*"+ name + ")=(.*?)(?:;|$)", "g");
+      var result = regexp.exec(document.cookie);
+      return (result === null) ? null : (this.isJSON(unescape(result[1]))) ? JSON.parse(unescape(result[1])) : unescape(result[1]);
+    },
+    /**
+     * attempt to use LocalStorage or fallback to cookie
+     * @param key string
+     * @param item string|int|Array|Object optional if passed the method saves data, if omitted the method returns data
+     * @returns {string}
+     */
+    db: function db(key,item) {
+      var text;
+      if ((function(){var mod='testHasLocalStorage';try{window.localStorage.setItem(mod,mod);window.localStorage.removeItem(mod);return true;}catch(e){return false;}})() === true){
+        if ("undefined" === typeof item) {
+          text = window.localStorage.getItem(key);
+          return (this.isJSON(text) ? JSON.parse(text) : text);
+        } else {
+          return window.localStorage.setItem(key, 'string' !== typeof item ? JSON.stringify(item) : item);
+        }
+      } else {
+        if ("undefined" === typeof item) {
+          text = this.getCookie(key);
+          return (this.isJSON(text) ? JSON.parse(text) : text);
+        } else {
+          return this.createCookie(key, 'string' !== typeof item ? JSON.stringify(item) : item);
+        }
+      }
+    }
+  };
+  window.PersistForms = PersistForms;
+  PersistFormsInstance = (new PersistForms()).init();
+})(window, jQuery);
