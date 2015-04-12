@@ -15,6 +15,10 @@ Automatically Persist Forms across page refreshes
  * Firefox for Android 23+
  * Blackberry Browser 7.0+
 
+## Gist
+
+https://gist.github.com/chrisdlangton/f1d9369e517583a06da0
+
 ## Setup
 
 add persistJS to your html head;
