@@ -1,15 +1,21 @@
 /**
  * @class persistJS
- * @verson 1.0
+ * @verson 1.1
  * @author Christopher D Langton <chris@codewiz.biz>
  * @classDescription Automatically Persist Forms across page refreshes
  */
+// PersistFormsOptions = {autoPersistAll: false};
 (function (window, $, undefined) {
   var PersistForms = function PersistForms(options) {
     if (window === this) {
       return new PersistForms(options);
     }
-    this.options = $.extend({}, this.options,options);
+    var defaults = {
+      autoPersistAll: true,
+      keyPropName: 'id', // define which form property to use for the key when persisting form data
+      watching: []
+    };
+    this.options = $.extend({}, defaults, window.PersistFormsOptions||{}, options);
     $.fn.serializeObject = function serializeObject(){
       var self = this,
           json = {},
@@ -53,32 +59,23 @@
     return this;
   };
   PersistForms.fn = PersistForms.prototype = {
+    /**
+     * starts the form watcher
+     * @returns {PersistForms}
+     */
     init: function init(){
-      var $that = this;
-      $(document).on('input change','form[id] input,form[id] select,form[id] textarea',function(){
+      var $that = this,
+          keyPropName = $that.options.keyPropName;
+      $(document).on('input change','form['+keyPropName+'] input,form['+keyPropName+'] select,form['+keyPropName+'] textarea',function(){
         var $form = $(this).parent('form');
-        PersistFormsInstance.db($form.prop('id'), $form.serializeObject());
+        PersistFormsInstance.set($form.prop($that.options.keyPropName), $form.serializeObject());
       });
-      $('form[id]').each(function(){
-        var $form = $(this),
-            formData = $that.db($form.prop('id'));
-        $('form[id] input,form[id] select,form[id] textarea').each(function(){
-          var $field = $(this),
-              fieldName = $field.prop('name').replace(/\[\]+$/,'');
-          if(formData !== null && formData[fieldName]) {
-            if (this.tagName === 'SELECT' && this.multiple) {
-              for (var i=0; i<formData[fieldName].length;i++) {
-                $field.children('option').filter('[value="'+formData[fieldName][i]+'"]').prop('selected', 'selected');
-              }
-            } else if (this.type === 'radio' || this.type === 'checkbox') {
-              for (var k=0; k<formData[fieldName].length;k++) {
-                $field.filter('[value="'+formData[fieldName][k]+'"]').prop('checked', 'checked');
-              }
-            } else {
-              $field.val(formData[fieldName]);
-            }
-          }
-        });
+      $('form['+keyPropName+']').each(function(){
+        var key = $(this).prop(keyPropName);
+        $that.options.watching.push(key);
+        if ($that.options.autoPersistAll) {
+          $that.restore(key);
+        }
       });
       return this;
     },
@@ -87,11 +84,62 @@
      * @param test string
      * @returns {boolean}
      */
-    isJSON: function isJSON(test){
-    if ("string" !== typeof test || '' === test) return false;
-    return /^[\],:{}\s]*$/.test(test.replace(/\\["\\\/bfnrtu]/g, '@').
-      replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
-      replace(/(?:^|:|,)(?:\s*\[)+/g, ''));
+    isJSON: function isJSON(test) {
+      if ("string" !== typeof test || '' === test) return false;
+      return /^[\],:{}\s]*$/.test(test.replace(/\\["\\\/bfnrtu]/g, '@').
+        replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
+        replace(/(?:^|:|,)(?:\s*\[)+/g, ''));
+    },
+    /**
+     * retrieves values from persistent store
+     * @param key string
+     * @returns {string|int|Array|Object}
+     */
+    get: function get(key) {
+      return PersistFormsInstance.db.call(this, key);
+    },
+    /**
+     * saves values to the persistent store
+     * @param key string
+     * @param value {string|int|Array|Object}
+     * @returns {PersistForms}
+     */
+    set: function get(key, value) {
+      return PersistFormsInstance.db.call(this, key, value);
+    },
+    /**
+     * restores form values from persistent store
+     * @param key string
+     * @param fn callback when restoring is complete
+     * @returns {PersistForms}
+     */
+    restore: function restore(key, fn) {
+      var that = this,
+          formData = this.get(key),
+          keyPropName = this.options.keyPropName;
+      $.when($('form['+keyPropName+'="'+key+'"] input,form['+keyPropName+'="'+key+'"] select,form['+keyPropName+'="'+key+'"] textarea').each(function(){
+        var $field = $(this),
+            fieldName = $field.prop('name').replace(/\[\]+$/,'');
+        if (formData !== null && formData[fieldName]) {
+          if (this.tagName === 'SELECT' && this.multiple) {
+            for (var i=0; i<formData[fieldName].length;i++) {
+              $field.children('option').filter('[value="'+formData[fieldName][i]+'"]').prop('selected', 'selected');
+            }
+          } else if (this.type === 'radio' || this.type === 'checkbox') {
+            for (var k=0; k<formData[fieldName].length;k++) {
+              $field.filter('[value="'+formData[fieldName][k]+'"]').prop('checked', 'checked');
+            }
+          } else {
+            $field.val(formData[fieldName]);
+          }
+        }
+      })).then(function(){
+        if ('function' === typeof fn){
+          fn.call(that, formData, keyPropName);
+        }
+      });
+
+      return this;
     },
     /**
      * @param name string
